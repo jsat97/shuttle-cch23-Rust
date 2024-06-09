@@ -1,0 +1,65 @@
+query --
+// limit doesnt work with ARRAY_AGG
+
+WITH region_gift_totals AS (
+    SELECT
+        regions.name as rn,
+        orders.gift_name as gn,
+        SUM(orders.quantity) AS total_quantity
+    FROM regions
+    LEFT JOIN
+        orders ON regions.id = orders.region_id
+    GROUP BY
+        rn,
+        gn
+)
+
+SELECT
+    rn,
+    ARRAY_AGG(gn ORDER BY total_quantity DESC, gn ASC) AS aggregated_gift_names
+FROM
+    region_gift_totals
+GROUP BY
+    rn
+ORDER BY
+    rn ASC
+
+
+
+query1 ---
+// uses ARRAY in order to use LIMIT condition
+
+WITH region_gift_totals AS (
+    SELECT
+        regions.name as rn,
+        orders.gift_name as gn,
+        SUM(orders.quantity) AS tq
+    FROM regions
+    LEFT JOIN
+        orders ON regions.id = orders.region_id
+    GROUP BY
+        rn,
+        gn
+)
+
+--SELECT * from region_gift_totals
+
+SELECT
+    rn,
+    ARRAY(
+        SELECT gn
+        FROM region_gift_totals
+        WHERE rn = rg.rn
+        ORDER BY tq DESC, gn ASC
+        LIMIT 2
+    ) AS aggregated_gift_names
+
+FROM (
+        SELECT rn
+        FROM region_gift_totals
+     )rg
+GROUP BY
+    rn
+ORDER BY
+    rn ASC;
+
